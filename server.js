@@ -4,29 +4,12 @@ const path = require('path');
 const hbs = require('express-handlebars');
 
 const passport = require('passport');
-const GoogleStrategy = require('passport-google-oauth20').Strategy;
+
 const session = require('express-session');
 
+const passportSetup = require('./config/passport');
+
 const app = express();
-
-passport.use(new GoogleStrategy({
-  clientID: process.env.clientID,
-  clientSecret: process.env.clientSecret,
-  callbackURL: process.env.callbackURL,
-}, (accessToken, refreshToken, profile, done) => {
-done(null, profile);
-console.log(profile);
-}));
-
-// serialize user when saving to session
-passport.serializeUser((user, serialize) => {
-  serialize(null, user);
-});
-
-// deserialize user when reading from session
-passport.deserializeUser((obj, deserialize) => {
-  deserialize(null, obj);
-});
 
 app.engine('hbs', hbs({ extname: 'hbs', layoutsDir: './layouts', defaultLayout: 'main' }));
 app.set('view engine', '.hbs');
@@ -37,6 +20,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, '/public')));
 
 app.use(session({ secret: '1234' }));
+
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -44,22 +28,8 @@ app.get('/', (req, res) => {
   res.render('index');
 });
 
-app.get('/user/logged', (req, res) => {
-  res.render('logged');
-});
-
-app.get('/user/no-permission', (req, res) => {
-  res.render('noPermission');
-});
-
-app.get('/auth/google',
-  passport.authenticate('google', { scope: ['email', 'profile'] }));
-
-app.get('/auth/google/callback', passport.authenticate('google', { failureRedirect: '/user/no-permission' }),
-  (req, res) => {
-    res.redirect('/user/logged');
-  }
-);
+app.use('/auth', require('./routes/auth.routes'));
+app.use('/user', require('./routes/user.routes'));
 
 app.use('/', (req, res) => {
   res.status(404).render('notFound');
