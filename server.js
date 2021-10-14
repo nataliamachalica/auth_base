@@ -10,11 +10,12 @@ const session = require('express-session');
 const app = express();
 
 passport.use(new GoogleStrategy({
-  clientID: '480449509148-j9htu1m0du7oe0h4vgn8hp2oibu5tu35.apps.googleusercontent.com',
-  clientSecret: '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',
-  callbackURL: 'http://localhost:4000/auth/callback'
+  clientID: process.env.clientID,
+  clientSecret: process.env.clientSecret,
+  callbackURL: process.env.callbackURL,
 }, (accessToken, refreshToken, profile, done) => {
 done(null, profile);
+console.log(profile);
 }));
 
 // serialize user when saving to session
@@ -35,7 +36,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, '/public')));
 
-app.use(session({ secret: 'anything' }));
+app.use(session({ secret: '1234' }));
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -50,6 +51,15 @@ app.get('/user/logged', (req, res) => {
 app.get('/user/no-permission', (req, res) => {
   res.render('noPermission');
 });
+
+app.get('/auth/google',
+  passport.authenticate('google', { scope: ['email', 'profile'] }));
+
+app.get('/auth/google/callback', passport.authenticate('google', { failureRedirect: '/user/no-permission' }),
+  (req, res) => {
+    res.redirect('/user/logged');
+  }
+);
 
 app.use('/', (req, res) => {
   res.status(404).render('notFound');
